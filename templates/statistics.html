@@ -1,0 +1,510 @@
+{% extends "base.html" %}
+
+{% block title %}Statistics - JobFinder{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1><i class="bi bi-bar-chart-fill"></i> Job Search Analytics</h1>
+        <p class="text-muted">Comprehensive statistics about your job discovery and application activity.</p>
+
+        <!-- Summary Cards -->
+        <div class="stats-grid fade-in">
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-number">{{ statistics.basic.total_discovered }}</div>
+                    <div class="stat-label">Jobs Discovered</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="bi bi-search"></i>
+                </div>
+            </div>
+            <div class="stat-card success">
+                <div class="stat-content">
+                    <div class="stat-number">{{ statistics.approved.total_approved }}</div>
+                    <div class="stat-label">Jobs Approved</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-content">
+                    <div class="stat-number">{{ statistics.approved.total_applied }}</div>
+                    <div class="stat-label">Applications Sent</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="bi bi-send"></i>
+                </div>
+            </div>
+            <div class="stat-card info">
+                <div class="stat-content">
+                    <div class="stat-number">{{ statistics.basic.total_analyzed }}</div>
+                    <div class="stat-label">AI Analyzed</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="bi bi-robot"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row g-4 mb-4">
+            <!-- Recent Activity Chart -->
+            <div class="col-lg-8">
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-activity"></i> Job Discovery Activity (Last 30 Days)</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if statistics.recent_activity %}
+                        <div style="position: relative; height: 300px;">
+                            <canvas id="activityChart"></canvas>
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted py-5">
+                            <i class="bi bi-inbox display-4"></i>
+                            <p class="mt-3">No recent activity to display</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Success Rate Card -->
+            <div class="col-lg-4">
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-percent"></i> Success Metrics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="success-metric mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="metric-label">Approval Rate</span>
+                                <span class="metric-value">
+                                    {% if statistics.basic.total_discovered > 0 %}
+                                        {{ "%.1f"|format((statistics.approved.total_approved / statistics.basic.total_discovered * 100)) }}%
+                                    {% else %}
+                                        0.0%
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" style="width: {% if statistics.basic.total_discovered > 0 %}{{ (statistics.approved.total_approved / statistics.basic.total_discovered * 100) }}%{% else %}0%{% endif %}"></div>
+                            </div>
+                        </div>
+
+                        <div class="success-metric mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="metric-label">Application Rate</span>
+                                <span class="metric-value">
+                                    {% if statistics.approved.total_approved > 0 %}
+                                        {{ "%.1f"|format((statistics.approved.total_applied / statistics.approved.total_approved * 100)) }}%
+                                    {% else %}
+                                        0.0%
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-info" style="width: {% if statistics.approved.total_approved > 0 %}{{ (statistics.approved.total_applied / statistics.approved.total_approved * 100) }}%{% else %}0%{% endif %}"></div>
+                            </div>
+                        </div>
+
+                        <div class="success-metric">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="metric-label">AI Analysis Rate</span>
+                                <span class="metric-value">
+                                    {% if statistics.basic.total_discovered > 0 %}
+                                        {{ "%.1f"|format((statistics.basic.total_analyzed / statistics.basic.total_discovered * 100)) }}%
+                                    {% else %}
+                                        0.0%
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-warning" style="width: {% if statistics.basic.total_discovered > 0 %}{{ (statistics.basic.total_analyzed / statistics.basic.total_discovered * 100) }}%{% else %}0%{% endif %}"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Location and Keyword Charts -->
+        <div class="row g-4">
+            <!-- Top Locations -->
+            <div class="col-lg-6">
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Top Job Locations</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if statistics.by_location %}
+                        <div style="position: relative; height: 250px;">
+                            <canvas id="locationChart"></canvas>
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-geo display-4"></i>
+                            <p class="mt-3">No location data available</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Keywords -->
+            <div class="col-lg-6">
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-tags"></i> Top Keywords</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if statistics.by_keyword %}
+                        <div style="position: relative; height: 250px;">
+                            <canvas id="keywordChart"></canvas>
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-tag display-4"></i>
+                            <p class="mt-3">No keyword data available</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Tables -->
+        {% if statistics.by_location or statistics.by_keyword %}
+        <div class="row g-4 mt-2">
+            <!-- Location Breakdown -->
+            {% if statistics.by_location %}
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-table"></i> Location Breakdown</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Location</th>
+                                        <th class="text-end">Jobs</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for location in statistics.by_location %}
+                                    <tr>
+                                        <td>{{ location.location }}</td>
+                                        <td class="text-end"><span class="badge bg-primary">{{ location.count }}</span></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Keyword Breakdown -->
+            {% if statistics.by_keyword %}
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-table"></i> Keyword Breakdown</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Keyword</th>
+                                        <th class="text-end">Jobs</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for keyword in statistics.by_keyword %}
+                                    <tr>
+                                        <td>{{ keyword.keyword }}</td>
+                                        <td class="text-end"><span class="badge bg-success">{{ keyword.count }}</span></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+            intersect: false,
+            mode: 'index',
+        },
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    usePointStyle: true,
+                    padding: 15,
+                    font: {
+                        size: 12
+                    }
+                }
+            },
+            tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                titleColor: 'white',
+                bodyColor: 'white',
+                borderColor: '#6366f1',
+                borderWidth: 1
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: {
+                    color: 'rgba(0,0,0,0.05)',
+                    drawBorder: false
+                },
+                ticks: {
+                    font: {
+                        size: 11
+                    },
+                    color: '#64748b'
+                }
+            },
+            x: {
+                grid: {
+                    color: 'rgba(0,0,0,0.05)',
+                    drawBorder: false
+                },
+                ticks: {
+                    font: {
+                        size: 11
+                    },
+                    color: '#64748b'
+                }
+            }
+        }
+    };
+
+    // Activity Chart
+    {% if statistics.recent_activity %}
+    const activityCtx = document.getElementById('activityChart').getContext('2d');
+    const activityData = {{ statistics.recent_activity | tojson }};
+
+    new Chart(activityCtx, {
+        type: 'line',
+        data: {
+            labels: activityData.map(item => {
+                const date = new Date(item.date);
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            }),
+            datasets: [{
+                label: 'Jobs Discovered',
+                data: activityData.map(item => item.discovered_count),
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            ...commonOptions,
+            plugins: {
+                ...commonOptions.plugins,
+                title: {
+                    display: true,
+                    text: 'Daily Job Discovery Activity'
+                }
+            }
+        }
+    });
+    {% endif %}
+
+    // Location Chart
+    {% if statistics.by_location %}
+    const locationCtx = document.getElementById('locationChart').getContext('2d');
+    const locationData = {{ statistics.by_location | tojson }};
+
+    new Chart(locationCtx, {
+        type: 'doughnut',
+        data: {
+            labels: locationData.map(item => item.location),
+            datasets: [{
+                data: locationData.map(item => item.count),
+                backgroundColor: [
+                    '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#06b6d4',
+                    '#8b5cf6', '#f97316', '#84cc16', '#ec4899', '#64748b'
+                ],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+
+    // Keyword Chart
+    {% if statistics.by_keyword %}
+    const keywordCtx = document.getElementById('keywordChart').getContext('2d');
+    const keywordData = {{ statistics.by_keyword | tojson }};
+
+    new Chart(keywordCtx, {
+        type: 'bar',
+        data: {
+            labels: keywordData.map(item => item.keyword),
+            datasets: [{
+                label: 'Jobs Found',
+                data: keywordData.map(item => item.count),
+                backgroundColor: '#10b981',
+                borderColor: '#059669',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...commonOptions,
+            indexAxis: 'y',
+            plugins: {
+                ...commonOptions.plugins,
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    }
+                },
+                x: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+});
+</script>
+
+<style>
+/* Statistics Page Specific Styles */
+
+.chart-card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    height: 100%;
+}
+
+.success-metric .metric-label {
+    font-size: 0.875rem;
+    color: var(--gray-700);
+    font-weight: 500;
+}
+
+.success-metric .metric-value {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.progress {
+    height: 8px;
+    background-color: var(--gray-200);
+    border-radius: 4px;
+}
+
+.progress-bar {
+    border-radius: 4px;
+}
+
+
+/* Chart container improvements */
+.chart-card {
+    min-height: 350px;
+}
+
+.chart-card .card-body {
+    padding: 1rem;
+}
+
+/* Mobile optimizations for charts */
+@media (max-width: 768px) {
+    .stat-number {
+        font-size: 1.5rem;
+    }
+
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.25rem;
+    }
+
+    /* Make chart containers smaller on mobile */
+    .chart-card {
+        min-height: 300px;
+    }
+
+    /* Reduce chart height on mobile */
+    .card-body > div[style*="height"] {
+        height: 200px !important;
+    }
+
+    /* Stack chart columns on mobile */
+    .row.g-4 .col-lg-6 {
+        margin-bottom: 1rem;
+    }
+
+    /* Adjust legend for mobile */
+    canvas {
+        max-width: 100%;
+    }
+}
+
+/* Tablet chart optimizations */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .chart-card {
+        min-height: 320px;
+    }
+}
+
+/* Force proper chart sizing */
+canvas {
+    max-width: 100% !important;
+    height: auto !important;
+}
+</style>
+{% endblock %}
